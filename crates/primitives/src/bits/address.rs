@@ -341,10 +341,13 @@ impl Address {
     pub fn create(&self, nonce: u64) -> Self {
         use alloy_rlp::{Encodable, EMPTY_LIST_CODE, EMPTY_STRING_CODE};
 
-        // max u64 encoded length is `1 + u64::BYTES`
-        const MAX_LEN: usize = 1 + (1 + 20) + 9;
+        // let epoch is 0
+        let epoch = 0u64;
 
-        let len = 22 + nonce.length();
+        // max u64 encoded length is `1 + u64::BYTES`
+        const MAX_LEN: usize = 1 + (1 + 20) + 9 + 9;
+
+        let len = 22 + epoch.length() + nonce.length();
         debug_assert!(len <= MAX_LEN);
 
         let mut out = [0u8; MAX_LEN];
@@ -357,8 +360,11 @@ impl Address {
         out[1] = EMPTY_STRING_CODE + 20;
         out[2..22].copy_from_slice(self.as_slice());
 
+        // epoch
+        epoch.encode(&mut &mut out[22..]);
+
         // nonce
-        nonce.encode(&mut &mut out[22..]);
+        nonce.encode(&mut &mut out[22 + epoch.length()..]);
 
         let hash = keccak256(&out[..len]);
         Self::from_word(hash)
